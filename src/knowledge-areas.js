@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // Seed config: git-tracked, defines area structure (name, description, notion, keywords, seedLeadUserIds)
 const CONFIG_PATH = path.join(__dirname, "config", "knowledge-areas.json");
+const SEED_CONFIG_PATH = path.join(__dirname, "config", "knowledge-areas.seed.json");
 const LEGACY_CONFIG_PATH = path.join(__dirname, "config", "product-areas.json");
 
 // Runtime roster: gitignored, stores learned leads/teamMembers with descriptions
@@ -275,12 +276,19 @@ export async function loadKnowledgeAreas(logger = null) {
         }
       } catch (legacyErr) {
         if (legacyErr.code === "ENOENT") {
-          // Neither file exists — fresh install
-          seedConfig = { areas: [] };
-          await fs.writeFile(CONFIG_PATH, JSON.stringify(seedConfig, null, 2), "utf8");
-          configLoaded = true;
-          if (logger) {
-            logger.info(`[Config] Created new seed config at ${CONFIG_PATH}`);
+          // Neither file exists — try Deal Desk seed (e.g. for Railway deploy)
+          try {
+            const seedData = await fs.readFile(SEED_CONFIG_PATH, "utf8");
+            seedConfig = JSON.parse(seedData);
+            if (!Array.isArray(seedConfig.areas)) seedConfig.areas = [];
+            await fs.writeFile(CONFIG_PATH, JSON.stringify(seedConfig, null, 2), "utf8");
+            configLoaded = true;
+            if (logger) logger.info(`[Config] Initialized from seed at ${CONFIG_PATH}`);
+          } catch {
+            seedConfig = { areas: [] };
+            await fs.writeFile(CONFIG_PATH, JSON.stringify(seedConfig, null, 2), "utf8");
+            configLoaded = true;
+            if (logger) logger.info(`[Config] Created new seed config at ${CONFIG_PATH}`);
           }
         } else {
           if (logger) logger.error(`[Config] Error loading legacy config: ${legacyErr?.message ?? legacyErr}`);

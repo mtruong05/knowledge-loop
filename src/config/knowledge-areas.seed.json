@@ -1,0 +1,14 @@
+{
+  "areas": [
+    {
+      "id": "deal-desk-31ed5556",
+      "name": "Deal Desk",
+      "description": "Deal desk policies, pricing, discounts, approvals, quotes, and FAQ.",
+      "notionPageId": "https://www.notion.so/Deal-Desk-FAQ-31ed5556a4b580f0b997e50a72d67770",
+      "seedLeadUserIds": ["U091ZMW3MFE"],
+      "keywords": ["deal desk", "deal", "pricing", "discount", "approval", "quote", "contract", "terms", "renewal", "exception"],
+      "createdAt": "2025-03-09T00:00:00.000Z",
+      "updatedAt": "2025-03-09T00:00:00.000Z"
+    }
+  ]
+}

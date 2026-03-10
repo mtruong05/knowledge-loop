@@ -606,65 +606,81 @@ export function registerDmHandler(app, ctx) {
         default: {
           // Try to answer from a knowledge area FAQ if this looks like a question
           let replied = false;
-          try {
-            const classification = await classifyQuestion(
-              anthropic,
-              config.claudeModel,
-              text,
-              areas,
-              null
-            );
-            if (
-              classification?.is_question &&
-              classification?.product_area_id &&
-              classification.product_area_id !== "general"
-            ) {
-              const area = getKnowledgeAreaById(classification.product_area_id);
-              if (area?.notionPageId) {
-                const faqContent = await ctx.getNotionContent(area.notionPageId);
-                if (faqContent?.trim()) {
-                  const answerResult = await askClaude(anthropic, config.claudeModel, {
-                    questionText: text,
-                    threadContext: "",
-                    faqContent,
-                    areaName: area.name,
-                  });
-                  if (answerResult.answer_found_in_faq && answerResult.answer?.trim()) {
-                    const replyText = answerResult.needs_escalation
-                      ? formatPartialAnswer(
-                          answerResult,
-                          area.name,
-                          await (async () => {
-                            const leads = getLeads(area.id);
-                            if (leads.length === 0) return area.ownerUserIds || [];
-                            try {
-                              return await selectRelevantLeads(
-                                anthropic,
-                                config.claudeSmartModel,
-                                text,
-                                leads,
-                                area.name
-                              );
-                            } catch {
-                              return leads.map((l) => l.userId);
-                            }
-                          })(),
-                          area.notionPageId,
-                          config.showEvidence
-                        )
-                      : formatAnswer(answerResult, area.name, config.showEvidence);
-                    await client.chat.postMessage({
-                      channel: event.channel,
-                      text: replyText,
-                      mrkdwn: true,
-                    });
-                    replied = true;
-                  }
-                }
-              }
+          const areasToTry = [];
+          if (areas.length === 1) {
+            // Single knowledge area (e.g. Deal Desk): treat any message that looks like a question
+            if (text.includes("?") || text.length > 15) {
+              areasToTry.push(areas[0]);
             }
-          } catch (err) {
-            logger.warn(`[DM] FAQ answer attempt failed: ${err?.message ?? err}`);
+          } else {
+            try {
+              const classification = await classifyQuestion(
+                anthropic,
+                config.claudeModel,
+                text,
+                areas,
+                null
+              );
+              if (
+                classification?.is_question &&
+                classification?.product_area_id &&
+                classification.product_area_id !== "general"
+              ) {
+                const area = getKnowledgeAreaById(classification.product_area_id);
+                if (area) areasToTry.push(area);
+              }
+            } catch (err) {
+              logger.warn(`[DM] Classification failed: ${err?.message ?? err}`);
+            }
+          }
+          for (const area of areasToTry) {
+            if (replied) break;
+            try {
+              if (!area?.notionPageId) continue;
+              const faqContent = await ctx.getNotionContent(area.notionPageId);
+              if (!faqContent?.trim()) continue;
+              const answerResult = await askClaude(anthropic, config.claudeModel, {
+                questionText: text,
+                threadContext: "",
+                faqContent,
+                areaName: area.name,
+              });
+              if (answerResult.answer_found_in_faq && answerResult.answer?.trim()) {
+                const escalationUserIds =
+                  (await (async () => {
+                    const leads = getLeads(area.id);
+                    if (leads.length === 0) return area.ownerUserIds || [];
+                    try {
+                      return await selectRelevantLeads(
+                        anthropic,
+                        config.claudeSmartModel,
+                        text,
+                        leads,
+                        area.name
+                      );
+                    } catch {
+                      return leads.map((l) => l.userId);
+                    }
+                  })());
+                const replyText = answerResult.needs_escalation
+                  ? formatPartialAnswer(
+                      answerResult,
+                      area.name,
+                      escalationUserIds,
+                      area.notionPageId,
+                      config.showEvidence
+                    )
+                  : formatAnswer(answerResult, area.name, config.showEvidence);
+                await client.chat.postMessage({
+                  channel: event.channel,
+                  text: replyText,
+                  mrkdwn: true,
+                });
+                replied = true;
+              }
+            } catch (err) {
+              logger.warn(`[DM] FAQ answer for "${area?.name}" failed: ${err?.message ?? err}`);
+            }
           }
           if (!replied) {
             const helpText = senderIsLead
