@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import config from "./config.js";
 
 // ─── JSON Schemas ───────────────────────────────────────────────────────────
 
@@ -833,7 +834,7 @@ export async function parseDmIntent(anthropic, model, dmText, knowledgeAreas, se
 5. **general** — Anything else: questions about the bot, greetings, help requests, etc.`;
 
   const system = `
-You are ${senderIsLead ? "Knowledge Bot" : "Knowledge Bot"}, an internal Slack bot. Someone has sent you a direct message.
+You are ${config.botName}, an internal Slack bot. Someone has sent you a direct message.
 
 ${permissionNote}
 

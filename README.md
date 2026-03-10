@@ -1,6 +1,10 @@
-# Knowledge Loop
+# Knowledge Loop (Deal Desk Bot)
 
-A Slack bot that answers your team's questions using Notion FAQ pages, powered by Claude. When it doesn't know the answer, it tags the right people — then learns from their responses so it knows next time.
+This repo is customized as **Deal Desk Bot**: a Slack bot that answers deal desk questions using your Notion FAQ, powered by Claude. When it doesn't know the answer, it tags the deal desk lead (e.g. Natalie Luu) and can learn from their responses.
+
+*(The underlying framework is Knowledge Loop — a general-purpose FAQ bot that answers from Notion and routes to subject-matter experts.)*
+
+**No credentials yet?** See **[DEAL_DESK_SETUP.md](./DEAL_DESK_SETUP.md)** for step-by-step Slack, Notion, and Anthropic setup.
 
 ## Prerequisites
 

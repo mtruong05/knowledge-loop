@@ -1,6 +1,6 @@
 {
-  "botName": "Knowledge Bot",
-  "slashCommand": "/kbot",
+  "botName": "Deal Desk Bot",
+  "slashCommand": "/dealdesk",
   "watchChannels": [],
   "showEvidence": false,
   "generalFaq": {

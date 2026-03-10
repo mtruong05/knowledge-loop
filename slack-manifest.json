@@ -1,18 +1,18 @@
 {
   "display_information": {
-    "name": "Knowledge Bot",
-    "description": "Answers questions from internal FAQs and routes to subject-matter experts.",
+    "name": "Deal Desk Bot",
+    "description": "Answers deal desk questions from the Notion FAQ and routes to the deal desk team.",
     "background_color": "#4A154B"
   },
   "features": {
     "bot_user": {
-      "display_name": "Knowledge Bot",
+      "display_name": "Deal Desk Bot",
       "always_online": true
     },
     "slash_commands": [
       {
-        "command": "/kbot",
-        "description": "Manage knowledge areas and FAQ configurations",
+        "command": "/dealdesk",
+        "description": "Manage deal desk knowledge area and FAQ",
         "usage_hint": "[list | add | remove | set-owners | help]",
         "should_escape": false
       }
@@ -28,15 +28,15 @@
       "bot": [
         "chat:write",
         "channels:history",
-        "groups:history",
         "channels:read",
+        "groups:history",
         "groups:read",
-        "users:read",
-        "users:read.email",
-        "commands",
         "im:history",
         "im:read",
-        "im:write"
+        "im:write",
+        "users:read",
+        "users:read.email",
+        "commands"
       ]
     }
   },
