@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { alreadySeen, resolveUsersByName, sendDmToUser } from "./slack-helpers.js";
-import { formatRosterArea } from "./formatters.js";
+import { formatRosterArea, formatAnswer, formatPartialAnswer } from "./formatters.js";
 import { extractPageId, updateFaqBlock, findBlockByContent, addCommentToBlock } from "./notion.js";
 import {
   getAllKnowledgeAreas,
@@ -17,9 +17,13 @@ import {
   updateMemberDescription,
   getMember,
   getLeadUserIds,
+  getLeads,
 } from "./knowledge-areas.js";
 import {
   parseDmIntent,
+  classifyQuestion,
+  askClaude,
+  selectRelevantLeads,
   evolveExpertiseDescription,
   reviseSuggestedUpdate,
 } from "./llm.js";
@@ -600,14 +604,78 @@ export function registerDmHandler(app, ctx) {
 
         case "general":
         default: {
-          const helpText = senderIsLead
-            ? `Here's what I can do via DM:\n• *Show the roster* — "Show me the roster" or "Who's on the engineering team?"\n• *Add/remove team members* — "Add @person to Engineering" or "Remove @person from Support"\n• *Promote/demote* — "Promote @person to lead for Engineering"\n• *Add a knowledge area* — "Create a new knowledge area called Platform"\n• *Self-register* — Tell me about your role and expertise\n\nJust ask naturally!`
-            : `Here's what I can do via DM:\n• *Show the roster* — "Show me the roster" or "Who's on the engineering team?"\n• *Self-register* — Tell me about your role and expertise to get added to a team\n\nJust ask naturally!`;
-          await client.chat.postMessage({
-            channel: event.channel,
-            text: result.response_message || helpText,
-            mrkdwn: true,
-          });
+          // Try to answer from a knowledge area FAQ if this looks like a question
+          let replied = false;
+          try {
+            const classification = await classifyQuestion(
+              anthropic,
+              config.claudeModel,
+              text,
+              areas,
+              null
+            );
+            if (
+              classification?.is_question &&
+              classification?.product_area_id &&
+              classification.product_area_id !== "general"
+            ) {
+              const area = getKnowledgeAreaById(classification.product_area_id);
+              if (area?.notionPageId) {
+                const faqContent = await ctx.getNotionContent(area.notionPageId);
+                if (faqContent?.trim()) {
+                  const answerResult = await askClaude(anthropic, config.claudeModel, {
+                    questionText: text,
+                    threadContext: "",
+                    faqContent,
+                    areaName: area.name,
+                  });
+                  if (answerResult.answer_found_in_faq && answerResult.answer?.trim()) {
+                    const replyText = answerResult.needs_escalation
+                      ? formatPartialAnswer(
+                          answerResult,
+                          area.name,
+                          await (async () => {
+                            const leads = getLeads(area.id);
+                            if (leads.length === 0) return area.ownerUserIds || [];
+                            try {
+                              return await selectRelevantLeads(
+                                anthropic,
+                                config.claudeSmartModel,
+                                text,
+                                leads,
+                                area.name
+                              );
+                            } catch {
+                              return leads.map((l) => l.userId);
+                            }
+                          })(),
+                          area.notionPageId,
+                          config.showEvidence
+                        )
+                      : formatAnswer(answerResult, area.name, config.showEvidence);
+                    await client.chat.postMessage({
+                      channel: event.channel,
+                      text: replyText,
+                      mrkdwn: true,
+                    });
+                    replied = true;
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            logger.warn(`[DM] FAQ answer attempt failed: ${err?.message ?? err}`);
+          }
+          if (!replied) {
+            const helpText = senderIsLead
+              ? `Here's what I can do via DM:\n• *Show the roster* — "Show me the roster" or "Who's on the engineering team?"\n• *Add/remove team members* — "Add @person to Engineering" or "Remove @person from Support"\n• *Promote/demote* — "Promote @person to lead for Engineering"\n• *Add a knowledge area* — "Create a new knowledge area called Platform"\n• *Self-register* — Tell me about your role and expertise\n\nJust ask naturally!`
+              : `Here's what I can do via DM:\n• *Show the roster* — "Show me the roster" or "Who's on the engineering team?"\n• *Self-register* — Tell me about your role and expertise to get added to a team\n\nJust ask naturally!`;
+            await client.chat.postMessage({
+              channel: event.channel,
+              text: result.response_message || helpText,
+              mrkdwn: true,
+            });
+          }
           break;
         }
       }
