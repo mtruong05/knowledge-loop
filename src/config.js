@@ -71,6 +71,9 @@ const config = Object.freeze({
     adminUserIds: Object.freeze([...(botConfig.generalFaq?.adminUserIds || [])]),
   }),
 
+  // Deploy notification: DM this user when the bot starts (e.g. after deployment)
+  deployNotifyUserId: botConfig.deployNotifyUserId || process.env.DEPLOY_NOTIFY_USER_ID || null,
+
   // Feature flags
   features: Object.freeze({
     autoDiscovery: botConfig.features?.autoDiscovery ?? true,

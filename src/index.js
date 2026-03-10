@@ -8,7 +8,7 @@ import { initNotion, fetchPageContent, fetchKbHierarchy } from "./notion.js";
 import { loadKnowledgeAreas, getAllKnowledgeAreas } from "./knowledge-areas.js";
 import { loadEscalations, cleanupOldEscalations } from "./escalation-tracker.js";
 import { loadFaqAnswers, cleanupOldFaqAnswers } from "./answer-tracker.js";
-import { resolveWatchChannels, initSlackIdentity } from "./slack-helpers.js";
+import { resolveWatchChannels, initSlackIdentity, sendDmToUser } from "./slack-helpers.js";
 import { registerAppHomeHandlers } from "./app-home.js";
 import { registerSlashCommand } from "./slash-commands.js";
 import { registerDmHandler, loadPendingDms } from "./dm-handler.js";
@@ -120,6 +120,16 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3000);
   await app.start(port);
   app.logger.info(`Bot started (Socket Mode).`);
+
+  // Notify deploy contact when bot reawakens
+  if (config.deployNotifyUserId) {
+    await sendDmToUser(
+      app.client,
+      config.deployNotifyUserId,
+      `:robot_face: *${config.botName}* has reawakened after a deployment and is now running.`,
+      app.logger
+    ).catch((e) => app.logger.warn(`[Bootstrap] Deploy notify DM failed: ${e?.message ?? e}`));
+  }
 
   // ─── Periodic jobs ───────────────────────────────────────────────────────
 

@@ -3,6 +3,7 @@
   "slashCommand": "/dealdesk",
   "watchChannels": [],
   "showEvidence": false,
+  "deployNotifyUserId": "U09QX2E37GB",
   "generalFaq": {
     "enabled": false,
     "notionPageUrl": "",
