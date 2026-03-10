@@ -107,10 +107,11 @@ You should see the bot connect via Socket Mode. In Slack you can:
 
 ## 6. (Optional) Deploy to Railway
 
-1. Fork this repo and connect it to [Railway](https://railway.app) → **New Project** → **Deploy from GitHub repo**.
-2. In the project, add the same **variables** as in your `.env`:  
-   `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `ANTHROPIC_API_KEY`, `NOTION_API_KEY`, and optionally `WATCH_CHANNELS`.
-3. In **Settings** → **Volumes**, add a volume mounted at **`/app/data`**, then add variable **`DATA_DIR=/app/data`** so state (rosters, escalations) persists.
+See **[RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md)** for step-by-step instructions. Summary:
+
+1. [Railway](https://railway.app) → **New Project** → **Deploy from GitHub repo** (connect **mtruong05/knowledge-loop**).
+2. Add **Variables**: `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `SLACK_SIGNING_SECRET`, `ANTHROPIC_API_KEY`, `NOTION_API_KEY`, and optionally `WATCH_CHANNELS`.
+3. In **Settings** → **Volumes**, add a volume with mount path **`/app/data`**, then add variable **`DATA_DIR=/app/data`** so state persists.
 4. Deploy. No public URL is required; the bot uses Socket Mode to connect to Slack.
 
 ---
